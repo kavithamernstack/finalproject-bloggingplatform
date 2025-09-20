@@ -63,7 +63,7 @@ app.use("/uploads", express.static("uploads", {
 app.get('/', (req, res) => res.json({ status: 'ok' }))
 
 // API routes
-app.use('/api/auth', authRoutes)
+app.use('/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/posts', postRoutes)
 app.use('/api/comments', commentRoutes)
