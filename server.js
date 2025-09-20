@@ -35,26 +35,16 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // allow requests with no origin (like Postman, mobile apps)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error("Not allowed by CORS"));
+    if(!origin) return callback(null, true); // allow Postman, server-to-server
+    if(allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error("Not allowed by CORS"), false);
     }
+    return callback(null, true);
   },
-  credentials: true, // allow cookies/auth headers
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  credentials: true,
+  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"]
 }));
-
-// Handle preflight requests globally
-app.options("*", cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
-
 
 app.use(helmet())
 app.use(morgan('dev'))
