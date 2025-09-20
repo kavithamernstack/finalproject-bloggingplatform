@@ -1,7 +1,7 @@
 // backend/seedCategories.js
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import Category from "./models/Category.js"; // adjust path if needed
+import Category from "./models/Category.js";
 import slugify from "slugify";
 
 dotenv.config();
@@ -25,20 +25,18 @@ mongoose
   .then(async () => {
     console.log("MongoDB connected!");
 
-    // Remove all existing categories (optional)
-    await Category.deleteMany({});
-    console.log("Old categories cleared.");
+    for (const name of categories) {
+      const slug = slugify(name, { lower: true, strict: true });
+      const exists = await Category.findOne({ slug });
+      if (!exists) {
+        await Category.create({ name, slug });
+        console.log(`✅ Added: ${name}`);
+      } else {
+        console.log(`ℹ️ Skipped (already exists): ${name}`);
+      }
+    }
 
-    // Prepare documents with slugs
-    const docs = categories.map(name => ({
-      name,
-      slug: slugify(name, { lower: true, strict: true }),
-    }));
-
-    // Insert categories
-    await Category.insertMany(docs);
-    console.log("Categories seeded successfully!");
-    
+    console.log("Seeding completed!");
     process.exit(0);
   })
   .catch(err => {
