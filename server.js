@@ -43,7 +43,9 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-app.use(helmet())
+app.use(helmet({
+  crossOriginResourcePolicy: false,  // disable helmet's CORP
+}));
 app.use(morgan('dev'))
 app.use(express.json({ limit: '2mb' }))
 app.use(express.urlencoded({ extended: true }))
