@@ -28,22 +28,19 @@ connectDB()
 const app = express()
 
 // Middlewares
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://blogging-platform-kavimernstack.netlify.app"
-];
+// in server setup
+const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:3000"].filter(Boolean);
+console.log("Allowed origins:", allowedOrigins);
 
 app.use(cors({
-  origin: function(origin, callback) {
-    if(!origin) return callback(null, true); // allow Postman, server-to-server
-    if(allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error("Not allowed by CORS"), false);
-    }
-    return callback(null, true);
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"), false);
   },
   credentials: true,
-  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization"]
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 app.use(helmet())
