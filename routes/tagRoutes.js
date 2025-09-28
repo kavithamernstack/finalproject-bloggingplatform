@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import {list, create, update, remove} from '../controllers/tagController.js'
-import { protect, adminOnly} from '../middleware/auth.js'
+import { protect } from '../middleware/auth.js'
 
 const route = Router()
 
