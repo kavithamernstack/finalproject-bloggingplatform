@@ -29,7 +29,7 @@ const app = express()
 
 // Middlewares
 // in server setup
-const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:3000"].filter(Boolean);
+const allowedOrigins = [process.env.CLIENT_URL, "https://project-blogs-1.netlify.app"].filter(Boolean);
 console.log("Allowed origins:", allowedOrigins);
 
 app.use(cors({
