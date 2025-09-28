@@ -82,7 +82,7 @@ if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath)
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "https://blogging-platform-kavimernstack.netlify.app",
+    origin: process.env.CLIENT_URL || "https://project-blogs-1.netlify.app",
     methods: ["GET", "POST"],
   }
 })
