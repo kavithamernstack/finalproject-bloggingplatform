@@ -1,7 +1,18 @@
 import Post from '../models/Post.js';
 import mongoose from 'mongoose';
 import Notification from '../models/Notification.js';
-import fs from "fs"; // ✅ added
+import { v2 as cloudinary } from 'cloudinary';
+import fs from 'fs';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Safe JSON parse function
 const safeJSONParse = (data, fallback) => {
@@ -12,15 +23,33 @@ const safeJSONParse = (data, fallback) => {
   }
 };
 
-// Creating post
+// Upload file to Cloudinary
+const uploadToCloudinary = async (file) => {
+  if (!file) return null;
+  try {
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: "post_banners",
+      use_filename: true,
+      unique_filename: true,
+    });
+    return result.secure_url; // Cloudinary URL
+  } catch (err) {
+    console.error("Cloudinary upload error:", err);
+    return null;
+  }
+};
+
+// ----------------- CREATE POST -----------------
+// Create post
 const createPost = async (req, res) => {
   try {
     const { title, content, excerpt, tags = "[]", categories = "[]", status = "draft" } = req.body;
 
-    let banner = null;
+    let bannerUrl = null;
     if (req.file) {
-      const buffer = fs.readFileSync(req.file.path);
-      banner = buffer.toString("base64"); // ✅ store as base64
+      bannerUrl = await uploadToCloudinary(req.file);
+      // Remove temp file
+      fs.unlinkSync(req.file.path);
     }
 
     const post = new Post({
@@ -31,27 +60,18 @@ const createPost = async (req, res) => {
       categories: safeJSONParse(categories, []),
       status,
       author: req.user._id,
-      banner: req.file ? req.file.buffer.toString("base64") : null, // store as Base64
-      bannerMime: req.file ? req.file.mimetype : null, // store MIME type
+      banner: bannerUrl, // store Cloudinary URL
     });
 
     await post.save();
 
-    if (post.status === "published") {
-      await Notification.create({
-        user: req.user._id,
-        type: "post_published",
-        message: `Your post "${post.title}" has been published!`,
-        relatedPost: post._id,
-      });
-    } else {
-      await Notification.create({
-        user: req.user._id,
-        type: "post_draft",
-        message: `Your post "${post.title}" is saved as a draft.`,
-        relatedPost: post._id,
-      });
-    }
+    // Create notification
+    await Notification.create({
+      user: req.user._id,
+      type: post.status === "published" ? "post_published" : "post_draft",
+      message: `Your post "${post.title}" has been ${post.status === "published" ? "published" : "saved as a draft"}.`,
+      relatedPost: post._id,
+    });
 
     res.json(post);
   } catch (err) {
@@ -60,17 +80,23 @@ const createPost = async (req, res) => {
   }
 };
 
-// Upload image for editor only
+
+// ----------------- UPLOAD EDITOR IMAGE -----------------
+
 const uploadEditorImage = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-  const buffer = fs.readFileSync(req.file.path);
-  const base64 = buffer.toString("base64");
-
-  res.json({ url: `data:image/jpeg;base64,${base64}` }); // ✅ return base64 url
+  try {
+    const url = await uploadToCloudinary(req.file);
+    fs.unlinkSync(req.file.path);
+    res.json({ url });
+  } catch (err) {
+    console.error("Editor image upload error:", err);
+    res.status(500).json({ message: "Failed to upload image" });
+  }
 };
 
-// Listing posts
+// ----------------- LIST POSTS -----------------
 const listPosts = async (req, res) => {
   try {
     const { page = 1, limit = 10, q = '', tag, category, author } = req.query;
@@ -107,7 +133,7 @@ const listPosts = async (req, res) => {
   }
 };
 
-// Listing my posts
+// ----------------- MY POSTS -----------------
 const myPosts = async (req, res) => {
   const posts = await Post.find({ author: req.user._id })
     .populate('categories', 'name slug')
@@ -115,7 +141,7 @@ const myPosts = async (req, res) => {
   res.json(posts);
 };
 
-// Get single post
+// ----------------- GET SINGLE POST -----------------
 const getPost = async (req, res) => {
   try {
     const post = await Post.findByIdAndUpdate(
@@ -135,15 +161,14 @@ const getPost = async (req, res) => {
   }
 };
 
+// ----------------- UPDATE POST -----------------
 // Update post
 const updatePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
-
-    if (String(post.author) !== String(req.user._id)) {
+    if (String(post.author) !== String(req.user._id))
       return res.status(403).json({ message: "Not authorized to update this post" });
-    }
 
     post.title = req.body.title || post.title;
     post.excerpt = req.body.excerpt || post.excerpt;
@@ -152,27 +177,20 @@ const updatePost = async (req, res) => {
     post.categories = req.body.categories ? safeJSONParse(req.body.categories, post.categories) : post.categories;
     post.status = req.body.status || post.status;
 
-    if (req.file?.buffer) {
-      post.banner = req.file.buffer.toString("base64");
-      post.bannerMime = req.file.mimetype;
+    if (req.file) {
+      const bannerUrl = await uploadToCloudinary(req.file);
+      fs.unlinkSync(req.file.path);
+      post.banner = bannerUrl;
     }
+
     const updatedPost = await post.save();
 
-    if (updatedPost.status === "published") {
-      await Notification.create({
-        user: req.user._id,
-        type: "post_published",
-        message: `Your post "${updatedPost.title}" has been published!`,
-        relatedPost: updatedPost._id,
-      });
-    } else if (updatedPost.status === "draft") {
-      await Notification.create({
-        user: req.user._id,
-        type: "post_draft",
-        message: `Your post "${updatedPost.title}" is now a draft.`,
-        relatedPost: updatedPost._id,
-      });
-    }
+    await Notification.create({
+      user: req.user._id,
+      type: updatedPost.status === "published" ? "post_published" : "post_draft",
+      message: `Your post "${updatedPost.title}" has been ${updatedPost.status === "published" ? "published" : "saved as a draft"}.`,
+      relatedPost: updatedPost._id,
+    });
 
     res.json(updatedPost);
   } catch (err) {
@@ -180,8 +198,7 @@ const updatePost = async (req, res) => {
     res.status(500).json({ message: err.message, stack: err.stack });
   }
 };
-
-// Like post
+// ----------------- LIKE POST -----------------
 const likePost = async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: 'Not Found' });
@@ -194,7 +211,7 @@ const likePost = async (req, res) => {
   res.json({ likes: post.metrics.likes.length });
 };
 
-// Share post
+// ----------------- SHARE POST -----------------
 const sharePost = async (req, res) => {
   const post = await Post.findByIdAndUpdate(
     req.params.id,
@@ -204,7 +221,7 @@ const sharePost = async (req, res) => {
   res.json({ shares: post.metrics.shares });
 };
 
-// Delete a post
+// ----------------- DELETE POST -----------------
 const deletePost = async (req, res) => {
   try {
     const postId = req.params.id;
@@ -228,14 +245,14 @@ const deletePost = async (req, res) => {
   }
 };
 
-// Unpublish a post
+// ----------------- UNPUBLISH POST -----------------
 const unpublishPost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
     if (String(post.author) !== String(req.user._id))
-      return res.status(403).json({ message: "Not authorized to unpublish this post" });
+      return res.status(403).json({ message: "Not authorized to unpublish post" });
 
     post.status = "draft";
     await post.save();
@@ -254,7 +271,7 @@ const unpublishPost = async (req, res) => {
   }
 };
 
-// ✅ Export all functions
+// ✅ EXPORT
 export {
   createPost,
   uploadEditorImage,
