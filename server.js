@@ -43,9 +43,7 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-app.use(helmet({
-  crossOriginResourcePolicy: false,  // disable helmet's CORP
-}));
+app.use(helmet())
 app.use(morgan('dev'))
 app.use(express.json({ limit: '2mb' }))
 app.use(express.urlencoded({ extended: true }))
@@ -77,8 +75,12 @@ app.use(notFound)
 app.use(errorHandler)
 
 // Ensure uploads folder exists
-const uploadPath = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath)
+const uploadPath = path.join(__dirname, "uploads")
+app.use("/uploads", express.static(uploadPath, {
+  setHeaders: (res) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
+  }
+}))
 
 // ------------------- SOCKET.IO SETUP -------------------
 const server = http.createServer(app)
