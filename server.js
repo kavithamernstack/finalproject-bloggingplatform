@@ -50,11 +50,19 @@ app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.use("/uploads", express.static("uploads", {
-  setHeaders: (res, path) => {
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+const uploadPath = path.join(__dirname, "uploads")
+app.use("/uploads", express.static(uploadPath, {
+  setHeaders: (res) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
   }
-}));
+}))
+
+
+
+
+// Ensure uploads folder exists
+
+
 
 // Basic route
 app.get('/', (req, res) => res.json({ status: 'ok' }))
@@ -73,14 +81,6 @@ app.use("/api/notifications", notificationRoutes)
 // Error handling
 app.use(notFound)
 app.use(errorHandler)
-
-// Ensure uploads folder exists
-const uploadPath = path.join(__dirname, "uploads")
-app.use("/uploads", express.static(uploadPath, {
-  setHeaders: (res) => {
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
-  }
-}))
 
 // ------------------- SOCKET.IO SETUP -------------------
 const server = http.createServer(app)

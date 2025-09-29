@@ -14,7 +14,7 @@ if (!fs.existsSync(uploadPath)) {
 // Multer storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(null,  uploadPath);
   },
   filename: (req, file, cb) => {
     // Use timestamp + random + original extension
