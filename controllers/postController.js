@@ -1,6 +1,6 @@
 import Post from '../models/Post.js';
 import mongoose from 'mongoose';
-import Notification from '../models/Notification.js'; 
+import Notification from '../models/Notification.js';
 import fs from "fs"; // ✅ added
 
 // Safe JSON parse function
@@ -31,7 +31,8 @@ const createPost = async (req, res) => {
       categories: safeJSONParse(categories, []),
       status,
       author: req.user._id,
-      banner, // ✅ base64 instead of path
+      banner: req.file ? req.file.buffer.toString("base64") : null, // store as Base64
+      bannerMime: req.file ? req.file.mimetype : null, // store MIME type
     });
 
     await post.save();
@@ -77,7 +78,7 @@ const listPosts = async (req, res) => {
     const limitNum = Number(limit) || 10;
 
     const filter = { status: 'published' };
-  
+
     if (q) filter.title = { $regex: q, $options: 'i' };
     if (tag) filter.tags = tag;
     if (category) {
@@ -122,8 +123,8 @@ const getPost = async (req, res) => {
       { $inc: { "metrics.views": 1 } },
       { new: true }
     )
-    .populate('author', 'username email')
-    .populate('categories', 'name slug');
+      .populate('author', 'username email')
+      .populate('categories', 'name slug');
 
     if (!post) return res.status(404).json({ message: 'Not Found' });
 
@@ -151,11 +152,10 @@ const updatePost = async (req, res) => {
     post.categories = req.body.categories ? safeJSONParse(req.body.categories, post.categories) : post.categories;
     post.status = req.body.status || post.status;
 
-    if (req.file) {
-      const buffer = fs.readFileSync(req.file.path);
-      post.banner = buffer.toString("base64"); // ✅ update with base64
+    if (req.file?.buffer) {
+      post.banner = req.file.buffer.toString("base64");
+      post.bannerMime = req.file.mimetype;
     }
-
     const updatedPost = await post.save();
 
     if (updatedPost.status === "published") {
