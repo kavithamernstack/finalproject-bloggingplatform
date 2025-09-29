@@ -40,16 +40,20 @@ const uploadToCloudinary = async (file) => {
 };
 
 // ----------------- CREATE POST -----------------
-// Create post
+// ----------------- CREATE POST -----------------
 const createPost = async (req, res) => {
   try {
     const { title, content, excerpt, tags = "[]", categories = "[]", status = "draft" } = req.body;
 
     let bannerUrl = null;
+
     if (req.file) {
+      // Upload file to Cloudinary
       bannerUrl = await uploadToCloudinary(req.file);
-      // Remove temp file
-      fs.unlinkSync(req.file.path);
+      fs.unlinkSync(req.file.path); // remove temp file
+    } else {
+      // Assign default banner URL if no file uploaded
+      bannerUrl = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1690000000/default-banner.jpg";
     }
 
     const post = new Post({
@@ -60,7 +64,7 @@ const createPost = async (req, res) => {
       categories: safeJSONParse(categories, []),
       status,
       author: req.user._id,
-      banner: bannerUrl, // store Cloudinary URL
+      banner: bannerUrl, // always set
     });
 
     await post.save();
@@ -104,16 +108,9 @@ const listPosts = async (req, res) => {
     const limitNum = Number(limit) || 10;
 
     const filter = { status: 'published' };
-
     if (q) filter.title = { $regex: q, $options: 'i' };
     if (tag) filter.tags = tag;
-    if (category) {
-      try {
-        filter.categories = { $in: [new mongoose.Types.ObjectId(category)] };
-      } catch (err) {
-        console.error("Invalid category id:", category);
-      }
-    }
+    if (category) filter.categories = { $in: [category] };
     if (author) filter.author = author;
 
     const [items, total] = await Promise.all([
@@ -126,19 +123,42 @@ const listPosts = async (req, res) => {
       Post.countDocuments(filter),
     ]);
 
-    res.json({ items, total, pages: Math.ceil(total / limitNum) });
+    // Ensure each post has a banner
+    const postsWithBanner = items.map(post => {
+      if (!post.banner) {
+        post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/Blogplatform/image/upload/v1690000000/default-banner.jpg";
+      }
+      return post;
+    });
+
+    res.json({ items: postsWithBanner, total, pages: Math.ceil(total / limitNum) });
   } catch (err) {
     console.error("ListPosts Error:", err);
     res.status(500).json({ message: "Failed to fetch posts" });
   }
 };
 
+
 // ----------------- MY POSTS -----------------
 const myPosts = async (req, res) => {
-  const posts = await Post.find({ author: req.user._id })
-    .populate('categories', 'name slug')
-    .sort({ createdAt: -1 });
-  res.json(posts);
+  try {
+    const posts = await Post.find({ author: req.user._id })
+      .populate('categories', 'name slug')
+      .sort({ createdAt: -1 });
+
+    // Ensure each post has a banner
+    const postsWithBanner = posts.map(post => {
+      if (!post.banner) {
+        post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/Blogplatform/image/upload/v1690000000/default-banner.jpg";
+      }
+      return post;
+    });
+
+    res.json(postsWithBanner);
+  } catch (err) {
+    console.error("MyPosts Error:", err);
+    res.status(500).json({ message: "Failed to fetch your posts" });
+  }
 };
 
 // ----------------- GET SINGLE POST -----------------
@@ -154,6 +174,11 @@ const getPost = async (req, res) => {
 
     if (!post) return res.status(404).json({ message: 'Not Found' });
 
+    // Ensure banner is always set
+    if (!post.banner) {
+      post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/Blogplatform/image/upload/v1690000000/default-banner.jpg";
+    }
+
     res.json(post);
   } catch (err) {
     console.error("GetPost Error:", err);
@@ -161,8 +186,8 @@ const getPost = async (req, res) => {
   }
 };
 
+
 // ----------------- UPDATE POST -----------------
-// Update post
 const updatePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -170,6 +195,7 @@ const updatePost = async (req, res) => {
     if (String(post.author) !== String(req.user._id))
       return res.status(403).json({ message: "Not authorized to update this post" });
 
+    // Update fields
     post.title = req.body.title || post.title;
     post.excerpt = req.body.excerpt || post.excerpt;
     post.content = req.body.content || post.content;
@@ -177,14 +203,20 @@ const updatePost = async (req, res) => {
     post.categories = req.body.categories ? safeJSONParse(req.body.categories, post.categories) : post.categories;
     post.status = req.body.status || post.status;
 
+    // Handle banner
     if (req.file) {
+      // Upload new banner
       const bannerUrl = await uploadToCloudinary(req.file);
       fs.unlinkSync(req.file.path);
       post.banner = bannerUrl;
+    } else if (!post.banner) {
+      // If banner is missing, use default
+      post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/Blogplatform/image/upload/v1690000000/default-banner.jpg";
     }
 
     const updatedPost = await post.save();
 
+    // Create notification
     await Notification.create({
       user: req.user._id,
       type: updatedPost.status === "published" ? "post_published" : "post_draft",
