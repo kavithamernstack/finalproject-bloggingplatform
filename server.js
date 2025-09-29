@@ -50,7 +50,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadPath = path.join(__dirname, "uploads")
+const uploadPath = path.join(__dirname, "../uploads")
 app.use("/uploads", express.static(uploadPath, {
   setHeaders: (res) => {
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
