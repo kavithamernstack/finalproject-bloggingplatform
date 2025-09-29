@@ -59,11 +59,6 @@ app.use("/uploads", express.static(uploadPath, {
 
 
 
-
-// Ensure uploads folder exists
-
-
-
 // Basic route
 app.get('/', (req, res) => res.json({ status: 'ok' }))
 
