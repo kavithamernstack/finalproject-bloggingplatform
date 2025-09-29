@@ -1,6 +1,7 @@
 import Post from '../models/Post.js';
 import mongoose from 'mongoose';
-import Notification from '../models/Notification.js'; // ⚡ Added import
+import Notification from '../models/Notification.js'; 
+import fs from "fs"; // ✅ added
 
 // Safe JSON parse function
 const safeJSONParse = (data, fallback) => {
@@ -16,6 +17,12 @@ const createPost = async (req, res) => {
   try {
     const { title, content, excerpt, tags = "[]", categories = "[]", status = "draft" } = req.body;
 
+    let banner = null;
+    if (req.file) {
+      const buffer = fs.readFileSync(req.file.path);
+      banner = buffer.toString("base64"); // ✅ store as base64
+    }
+
     const post = new Post({
       title,
       content,
@@ -24,12 +31,11 @@ const createPost = async (req, res) => {
       categories: safeJSONParse(categories, []),
       status,
       author: req.user._id,
-      banner: req.file?.filename ? `/uploads/${req.file.filename}` : null,
+      banner, // ✅ base64 instead of path
     });
 
     await post.save();
 
-    // ⚡ Add notification for published/draft
     if (post.status === "published") {
       await Notification.create({
         user: req.user._id,
@@ -56,7 +62,11 @@ const createPost = async (req, res) => {
 // Upload image for editor only
 const uploadEditorImage = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-  res.json({ url: `/uploads/${req.file.filename}` });
+
+  const buffer = fs.readFileSync(req.file.path);
+  const base64 = buffer.toString("base64");
+
+  res.json({ url: `data:image/jpeg;base64,${base64}` }); // ✅ return base64 url
 };
 
 // Listing posts
@@ -141,13 +151,13 @@ const updatePost = async (req, res) => {
     post.categories = req.body.categories ? safeJSONParse(req.body.categories, post.categories) : post.categories;
     post.status = req.body.status || post.status;
 
-    if (req.file?.filename) {
-      post.banner = `/uploads/${req.file.filename}`;
+    if (req.file) {
+      const buffer = fs.readFileSync(req.file.path);
+      post.banner = buffer.toString("base64"); // ✅ update with base64
     }
 
     const updatedPost = await post.save();
 
-    // ⚡ Add notification for publish/unpublish change
     if (updatedPost.status === "published") {
       await Notification.create({
         user: req.user._id,
@@ -230,7 +240,6 @@ const unpublishPost = async (req, res) => {
     post.status = "draft";
     await post.save();
 
-    // ⚡ Add notification for unpublish
     await Notification.create({
       user: req.user._id,
       type: "post_draft",
