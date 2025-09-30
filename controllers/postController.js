@@ -53,7 +53,7 @@ const createPost = async (req, res) => {
       fs.unlinkSync(req.file.path); // remove temp file
     } else {
       // Assign default banner URL if no file uploaded
-      bannerUrl = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1690000000/default-banner.jpg";
+      bannerUrl = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/dpjhn8gha/image/upload/v1759210894/default_1_jlzzn0.jpg";
     }
 
     const post = new Post({
@@ -126,7 +126,7 @@ const listPosts = async (req, res) => {
     // Ensure each post has a banner
     const postsWithBanner = items.map(post => {
       if (!post.banner) {
-        post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/Blogplatform/image/upload/v1690000000/default-banner.jpg";
+        post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/dpjhn8gha/image/upload/v1759210894/default_1_jlzzn0.jpg";
       }
       return post;
     });
