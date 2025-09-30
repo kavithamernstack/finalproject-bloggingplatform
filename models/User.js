@@ -30,15 +30,14 @@ const userSchema = new mongoose.Schema({
     },
 
     bio: String,
-    avatar:  { type: String, default: "" },
-
+    avatar: { type: String, default: "/uploads/default-avatar.png" },
     links: {
-        twitter: String,
-        linkedin: String,
-        github: String,
-        facebook: String,
-        whatsapp: String,
-        youtube: String,
+        twitter: { type: String, default: "" },
+        linkedin: { type: String, default: "" },
+        github: { type: String, default: "" },
+        facebook: { type: String, default: "" },
+        whatsapp: { type: String, default: "" },
+        youtube: { type: String, default: "" },
     },
 
     resetToken: String,

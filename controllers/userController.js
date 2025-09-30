@@ -10,16 +10,26 @@ export const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Basic fields
     user.name = req.body.name || user.name;
     user.bio = req.body.bio || user.bio;
 
+    // Avatar
     if (req.file) {
-      user.avatar = `/uploads/${req.file.filename}`; // ✅ store correct path
+      user.avatar = `/uploads/${req.file.filename}`;
     }
+
+    // Social links
+    user.links = user.links || {};
+    Object.keys(req.body).forEach((key) => {
+      const match = key.match(/^links\[(.+)\]$/);
+      if (match) {
+        const linkKey = match[1]; // e.g., 'facebook'
+        user.links[linkKey] = req.body[key];
+      }
+    });
 
     await user.save();
 
@@ -29,8 +39,9 @@ export const updateProfile = async (req, res) => {
         name: user.name,
         bio: user.bio,
         email: user.email,
-        avatar: user.avatar, // ✅ send back correct path
-      }
+        avatar: user.avatar,
+        links: user.links,
+      },
     });
   } catch (error) {
     console.error("Profile update error:", error);
