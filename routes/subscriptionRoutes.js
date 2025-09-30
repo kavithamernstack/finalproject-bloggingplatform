@@ -7,7 +7,8 @@ const route = Router()
 
 route.get('/check/:userId', protect, check)
 route.get('/feed', protect, feed)
-route.delete('/:userId', protect, toggle)
+route.post('/:userId', protect, toggle)  // subscribe
+route.delete('/:userId', protect, toggle) // unsubscribe
 route.get("/bloggers", protect, bloggerSubs);
 route.get("/categories", protect, categorySubs);
 
