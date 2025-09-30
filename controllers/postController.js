@@ -25,19 +25,31 @@ const safeJSONParse = (data, fallback) => {
 
 // Upload file to Cloudinary
 const uploadToCloudinary = async (file) => {
-  if (!file) return null;
   try {
+    if (!file) {
+      return (
+        process.env.DEFAULT_BANNER_URL ||
+        "https://res.cloudinary.com/dpjhn8gha/image/upload/v1759210894/default_1_jlzzn0.jpg"
+      );
+    }
+
     const result = await cloudinary.uploader.upload(file.path, {
       folder: "post_banners",
       use_filename: true,
       unique_filename: true,
     });
-    return result.secure_url; // Cloudinary URL
+
+    return result.secure_url;
   } catch (err) {
     console.error("Cloudinary upload error:", err);
-    return null;
+    // Always fall back
+    return (
+      process.env.DEFAULT_BANNER_URL ||
+      "https://res.cloudinary.com/dpjhn8gha/image/upload/v1759210894/default_1_jlzzn0.jpg"
+    );
   }
 };
+
 
 // ----------------- CREATE POST -----------------
 // ----------------- CREATE POST -----------------
