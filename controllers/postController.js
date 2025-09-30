@@ -149,7 +149,7 @@ const myPosts = async (req, res) => {
     // Ensure each post has a banner
     const postsWithBanner = posts.map(post => {
       if (!post.banner) {
-        post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/Blogplatform/image/upload/v1690000000/default-banner.jpg";
+        post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/dpjhn8gha/image/upload/v1759210894/default_1_jlzzn0.jpg";
       }
       return post;
     });
@@ -176,7 +176,7 @@ const getPost = async (req, res) => {
 
     // Ensure banner is always set
     if (!post.banner) {
-      post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/Blogplatform/image/upload/v1690000000/default-banner.jpg";
+      post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/dpjhn8gha/image/upload/v1759210894/default_1_jlzzn0.jpg";
     }
 
     res.json(post);
@@ -211,7 +211,7 @@ const updatePost = async (req, res) => {
       post.banner = bannerUrl;
     } else if (!post.banner) {
       // If banner is missing, use default
-      post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/Blogplatform/image/upload/v1690000000/default-banner.jpg";
+      post.banner = process.env.DEFAULT_BANNER_URL || "https://res.cloudinary.com/dpjhn8gha/image/upload/v1759210894/default_1_jlzzn0.jpg";
     }
 
     const updatedPost = await post.save();
