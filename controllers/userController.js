@@ -1,15 +1,14 @@
 import User from "../models/User.js";
 
-// getting user profile
+// Get logged-in user's profile
 export const getProfile = async (req, res) => {
-  res.json(req.user)
-}
+  res.json(req.user);
+};
 
-//updaing the user profie
+// Update profile
 export const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Basic fields
@@ -26,8 +25,8 @@ export const updateProfile = async (req, res) => {
     Object.keys(req.body).forEach((key) => {
       const match = key.match(/^links\[(.+)\]$/);
       if (match) {
-        const linkKey = match[1]; // e.g., 'facebook'
-        user.links[linkKey] = req.body[key];
+        const linkKey = match[1];
+        user.links[linkKey] = req.body[key] || "";
       }
     });
 
@@ -49,12 +48,9 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-
-
-// getting the user details
+// Get any user by ID
 export const getUser = async (req, res) => {
-  const user = await User.findById(req.params.id).select('-password')
-  if (!user)
-    return res.status(404).json({ message: "Not Found" })
-  res.json(user)
-}
+  const user = await User.findById(req.params.id).select('-password');
+  if (!user) return res.status(404).json({ message: "Not Found" });
+  res.json(user);
+};

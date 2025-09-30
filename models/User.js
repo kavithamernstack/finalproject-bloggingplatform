@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
         default: 'user'
     },
 
-    bio: String,
+    bio: { type: String, default: "" },
     avatar: { type: String, default: "/uploads/default-avatar.png" },
     links: {
         twitter: { type: String, default: "" },
