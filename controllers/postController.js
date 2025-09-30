@@ -181,7 +181,7 @@ const getPost = async (req, res) => {
       { $inc: { "metrics.views": 1 } },
       { new: true }
     )
-      .populate('author', 'username email')
+      .populate('author', 'username name email')
       .populate('categories', 'name slug');
 
     if (!post) return res.status(404).json({ message: 'Not Found' });
